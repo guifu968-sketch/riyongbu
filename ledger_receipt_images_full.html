@@ -1,0 +1,1327 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no">
+<meta name="theme-color" content="#f3ecdd">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="日用簿">
+<title>日用簿 · Ledger</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;600;700;900&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #f3ecdd;
+    --bg-deep: #ebe1cc;
+    --card: #faf5e9;
+    --ink: #1a1410;
+    --ink-soft: #5a4e3f;
+    --ink-light: #8a7e6f;
+    --accent: #b54327;
+    --border: #d4c9b5;
+    --border-soft: #e4dac4;
+    --serif: 'Noto Serif SC', 'Songti SC', 'Source Han Serif SC', serif;
+    --mono: 'JetBrains Mono', 'SF Mono', 'Menlo', monospace;
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    font-family: var(--serif);
+    background: var(--bg);
+    color: var(--ink);
+    min-height: 100vh;
+    background-image:
+      radial-gradient(circle at 15% 10%, rgba(181, 67, 39, 0.04) 0px, transparent 50%),
+      radial-gradient(circle at 85% 90%, rgba(107, 142, 90, 0.04) 0px, transparent 50%);
+    padding-bottom: env(safe-area-inset-bottom);
+    padding-top: env(safe-area-inset-top);
+    overscroll-behavior-y: contain;
+  }
+  .app {
+    max-width: 440px;
+    margin: 0 auto;
+    padding: 20px 18px 120px;
+  }
+  /* Header */
+  .header { margin-bottom: 28px; }
+  .header-row { display: flex; justify-content: space-between; align-items: baseline; }
+  .brand-eyebrow {
+    font-size: 11px; letter-spacing: 6px; color: var(--ink-light);
+    text-transform: uppercase; margin-bottom: 6px; font-family: var(--mono);
+  }
+  .brand-title {
+    margin: 0; font-size: 28px; font-weight: 800;
+    letter-spacing: -0.02em; line-height: 1;
+  }
+  .total-label { font-size: 10px; color: var(--ink-light); margin-bottom: 2px; }
+  .total-mini {
+    font-size: 16px; font-weight: 600; font-family: var(--mono); color: var(--ink-soft);
+  }
+  .divider {
+    margin-top: 14px; height: 1px;
+    background: linear-gradient(to right, var(--ink) 0%, var(--ink) 30%, transparent 100%);
+  }
+  /* View switcher */
+  .switcher {
+    display: flex; background: var(--bg-deep); border-radius: 12px;
+    padding: 4px; margin-bottom: 18px; border: 1px solid var(--border-soft);
+  }
+  .switcher button {
+    flex: 1; padding: 10px 0; background: transparent; border: none;
+    border-radius: 9px; cursor: pointer; font-family: var(--serif);
+    font-size: 15px; color: var(--ink-light); transition: all 0.2s;
+  }
+  .switcher button.active {
+    background: var(--card); color: var(--ink); font-weight: 700;
+    box-shadow: 0 1px 3px rgba(26, 20, 16, 0.08);
+  }
+  /* Period card */
+  .period-card {
+    background: var(--card); border-radius: 16px; border: 1px solid var(--border-soft);
+    padding: 20px 22px; margin-bottom: 18px; position: relative; overflow: hidden;
+  }
+  .period-card::before {
+    content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px;
+    background: linear-gradient(90deg, var(--accent) 0%, var(--accent) 30%, transparent 80%);
+  }
+  .period-nav {
+    display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px;
+  }
+  .period-nav button {
+    background: transparent; border: none; cursor: pointer; padding: 8px;
+    color: var(--ink-soft); display: flex; align-items: center;
+  }
+  .period-label { font-size: 13px; color: var(--ink-soft); letter-spacing: 1px; text-align: center; }
+  .period-current {
+    font-size: 9px; color: var(--accent); letter-spacing: 3px;
+    margin-top: 2px; font-family: var(--mono);
+  }
+  .total-wrap { text-align: center; padding: 8px 0 4px; }
+  .total-eyebrow {
+    font-size: 10px; color: var(--ink-light); letter-spacing: 5px;
+    margin-bottom: 6px; text-transform: uppercase; font-family: var(--mono);
+  }
+  .total-amount {
+    font-family: var(--mono); font-size: 42px; font-weight: 700;
+    color: var(--ink); letter-spacing: -0.02em; line-height: 1;
+  }
+  .total-amount .yuan { font-size: 22px; color: var(--accent); margin-right: 4px; }
+  .total-meta { font-size: 12px; color: var(--ink-light); margin-top: 10px; }
+  /* Section */
+  section { margin-bottom: 18px; }
+  .section-title {
+    display: flex; align-items: center; gap: 10px;
+    margin-bottom: 10px; padding-left: 4px;
+  }
+  .section-title .dot { width: 4px; height: 14px; background: var(--accent); border-radius: 1px; }
+  .section-title .text {
+    font-size: 13px; font-weight: 600; color: var(--ink-soft); letter-spacing: 2px;
+  }
+  .panel {
+    background: var(--card); border-radius: 16px;
+    border: 1px solid var(--border-soft); padding: 18px;
+  }
+  /* Bar chart */
+  .bars { display: flex; align-items: flex-end; gap: 6px; height: 130px; padding: 0 4px; }
+  .bar-col { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 6px; min-width: 0; }
+  .bar-track { width: 100%; flex: 1; display: flex; align-items: flex-end; }
+  .bar {
+    width: 100%; min-height: 2px; background: var(--accent); opacity: 0.85;
+    border-radius: 3px 3px 0 0; transition: height 0.3s;
+  }
+  .bar.empty { background: var(--border-soft); opacity: 1; min-height: 2px; }
+  .bar-label {
+    font-size: 10px; color: var(--ink-light); font-family: var(--mono);
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .bars.month { gap: 2px; }
+  .bars.month .bar-label { font-size: 8px; }
+  /* Categories */
+  .cat-wrap { display: flex; align-items: center; gap: 16px; }
+  .pie-wrap { width: 110px; height: 110px; flex-shrink: 0; position: relative; }
+  .pie-center {
+    position: absolute; inset: 0; display: flex; flex-direction: column;
+    align-items: center; justify-content: center; pointer-events: none;
+  }
+  .pie-center-eyebrow { font-size: 9px; color: var(--ink-light); letter-spacing: 1px; }
+  .pie-center-value { font-size: 18px; font-weight: 700; font-family: var(--mono); color: var(--ink); }
+  .cat-list { flex: 1; min-width: 0; }
+  .cat-row { margin-bottom: 8px; }
+  .cat-row:last-child { margin-bottom: 0; }
+  .cat-row-top {
+    display: flex; justify-content: space-between; font-size: 12px; margin-bottom: 3px;
+  }
+  .cat-row-name { color: var(--ink); }
+  .cat-row-name .icon { margin-right: 4px; }
+  .cat-row-pct { font-family: var(--mono); color: var(--ink-soft); }
+  .cat-row-bar { height: 3px; background: var(--bg-deep); border-radius: 2px; overflow: hidden; }
+  .cat-row-bar > div { height: 100%; border-radius: 2px; transition: width 0.3s; }
+  .cat-more { font-size: 11px; color: var(--ink-light); margin-top: 4px; }
+  /* Transactions */
+  .tx-empty {
+    background: var(--card); border-radius: 16px; border: 1px dashed var(--border);
+    padding: 40px 20px; text-align: center; color: var(--ink-light);
+  }
+  .tx-empty .symbol { font-size: 32px; margin-bottom: 10px; opacity: 0.5; }
+  .tx-empty .text { font-size: 13px; letter-spacing: 1px; }
+  .tx-empty .hint {
+    font-size: 11px; margin-top: 6px; color: var(--ink-light);
+    font-family: var(--mono); letter-spacing: 2px;
+  }
+  .tx-list {
+    background: var(--card); border-radius: 16px;
+    border: 1px solid var(--border-soft); overflow: hidden;
+  }
+  .tx-item {
+    padding: 14px 16px; display: flex; align-items: center; gap: 12px;
+    border-bottom: 1px solid var(--border-soft);
+  }
+  .tx-item:last-child { border-bottom: none; }
+  .tx-icon {
+    width: 38px; height: 38px; border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 18px; flex-shrink: 0;
+  }
+  .tx-body { flex: 1; min-width: 0; }
+  .tx-line1 {
+    display: flex; justify-content: space-between; align-items: baseline;
+  }
+  .tx-name { font-size: 15px; font-weight: 600; color: var(--ink); }
+  .tx-amount {
+    font-family: var(--mono); font-size: 15px; font-weight: 700; color: var(--ink);
+  }
+  .tx-line2 {
+    display: flex; justify-content: space-between; align-items: center;
+    margin-top: 2px; gap: 8px;
+  }
+  .tx-meta {
+    font-size: 11px; color: var(--ink-light); font-family: var(--mono);
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+  .tx-meta .note { margin-left: 8px; font-family: var(--serif); color: var(--ink-soft); }
+  .tx-delete {
+    background: transparent; border: none; cursor: pointer;
+    color: var(--ink-light); padding: 6px; opacity: 0.5; flex-shrink: 0;
+  }
+  /* FAB */
+  .fab {
+    position: fixed; bottom: calc(28px + env(safe-area-inset-bottom));
+    right: max(20px, calc(50vw - 200px));
+    width: 58px; height: 58px; border-radius: 50%;
+    background: var(--ink); color: var(--bg); border: none; cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    box-shadow: 0 8px 24px rgba(26, 20, 16, 0.25), 0 2px 6px rgba(26, 20, 16, 0.1);
+    z-index: 50; font-size: 28px; font-weight: 300; line-height: 1;
+    -webkit-touch-callout: none;
+  }
+  .fab:active { transform: scale(0.96); }
+  /* Modal */
+  .modal-backdrop {
+    position: fixed; inset: 0; background: rgba(26, 20, 16, 0.4);
+    z-index: 100; display: flex; align-items: flex-end; justify-content: center;
+    animation: fadeIn 0.2s ease-out;
+  }
+  .modal {
+    width: 100%; max-width: 440px; background: var(--card);
+    border-radius: 20px 20px 0 0;
+    padding: 22px 22px calc(28px + env(safe-area-inset-bottom));
+    box-shadow: 0 -8px 32px rgba(26, 20, 16, 0.2);
+    animation: slideUp 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+    max-height: 92vh; overflow-y: auto;
+  }
+  .modal-head {
+    display: flex; justify-content: space-between; align-items: center; margin-bottom: 18px;
+  }
+  .modal-title { font-size: 18px; font-weight: 700; letter-spacing: 2px; margin: 0; }
+  .modal-close {
+    background: transparent; border: none; cursor: pointer;
+    color: var(--ink-soft); padding: 4px; font-size: 22px; line-height: 1;
+  }
+  .amount-row {
+    border-bottom: 2px solid var(--ink); padding-bottom: 8px;
+    margin-bottom: 22px; display: flex; align-items: baseline; gap: 8px;
+  }
+  .amount-yuan {
+    font-size: 28px; color: var(--accent); font-family: var(--mono); font-weight: 700;
+  }
+  .amount-input {
+    flex: 1; background: transparent; border: none; outline: none;
+    font-size: 36px; font-family: var(--mono); font-weight: 700;
+    color: var(--ink); width: 100%; padding: 0;
+    -moz-appearance: textfield;
+  }
+  .amount-input::-webkit-outer-spin-button,
+  .amount-input::-webkit-inner-spin-button {
+    -webkit-appearance: none; margin: 0;
+  }
+  .cat-eyebrow {
+    font-size: 10px; color: var(--ink-light); letter-spacing: 4px;
+    margin-bottom: 10px; font-family: var(--mono); text-transform: uppercase;
+  }
+  .cat-grid {
+    display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 18px;
+  }
+  .cat-btn {
+    padding: 12px 4px; border-radius: 12px; border: 1.5px solid var(--border-soft);
+    background: transparent; cursor: pointer; display: flex; flex-direction: column;
+    align-items: center; gap: 4px; transition: all 0.15s;
+  }
+  .cat-btn .ico { font-size: 22px; }
+  .cat-btn .lbl { font-size: 11px; color: var(--ink-soft); font-family: var(--serif); }
+  .cat-btn.active .lbl { font-weight: 700; }
+  .note-input {
+    width: 100%; padding: 12px 14px; background: var(--bg-deep);
+    border: 1px solid var(--border-soft); border-radius: 10px;
+    outline: none; font-size: 14px; font-family: var(--serif);
+    color: var(--ink); margin-bottom: 18px;
+  }
+  .submit-btn {
+    width: 100%; padding: 14px; background: var(--ink); color: var(--bg);
+    border: none; border-radius: 12px; font-size: 15px; font-weight: 700;
+    letter-spacing: 4px; font-family: var(--serif); cursor: pointer;
+    transition: all 0.15s;
+  }
+  .submit-btn:disabled {
+    background: var(--bg-deep); color: var(--ink-light); cursor: not-allowed;
+  }
+  .submit-btn:not(:disabled):active { transform: scale(0.99); }
+  .action-row { display: flex; gap: 10px; }
+  .action-row .submit-btn { flex: 1; }
+  .delete-btn {
+    background: transparent !important; color: var(--accent) !important;
+    border: 1.5px solid var(--accent); flex: 0 0 38% !important;
+  }
+  .delete-btn:active { background: rgba(181, 67, 39, 0.08) !important; }
+  .time-quick {
+    display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px;
+  }
+  .time-quick button {
+    padding: 9px 4px; border-radius: 9px;
+    border: 1.5px solid var(--border-soft); background: transparent;
+    cursor: pointer; font-family: var(--serif); font-size: 12px;
+    color: var(--ink-soft); transition: all 0.15s;
+  }
+  .time-quick button.active {
+    border-color: var(--ink); background: var(--ink); color: var(--bg); font-weight: 600;
+  }
+  .date-display {
+    margin-top: 8px; font-size: 12px; color: var(--ink-light);
+    font-family: var(--mono); text-align: center; letter-spacing: 0.5px;
+    min-height: 16px;
+  }
+  .tx-item { cursor: pointer; transition: background 0.12s; }
+  .tx-item:active { background: var(--bg-deep); }
+  input::placeholder { color: var(--ink-light); opacity: 0.6; }
+  @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+  @keyframes slideUp {
+    from { transform: translateY(100%); }
+    to { transform: translateY(0); }
+  }
+  /* Tooltip-ish on bar tap */
+  .bar-col.active .bar { opacity: 1; }
+  .bar-col.active .bar-label { color: var(--accent); font-weight: 700; }
+  /* Menu button & sheet */
+  .menu-btn {
+    background: transparent; border: 1px solid var(--border);
+    width: 32px; height: 32px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer; color: var(--ink-soft);
+    font-size: 16px; line-height: 1; padding: 0;
+    margin-top: 4px;
+  }
+  .menu-btn:active { background: var(--bg-deep); }
+  .header-right { display: flex; align-items: flex-start; gap: 10px; }
+  .menu-row {
+    display: flex; align-items: center; gap: 14px;
+    padding: 14px 4px; cursor: pointer;
+    border-bottom: 1px solid var(--border-soft);
+    background: transparent; border-left: none; border-right: none; border-top: none;
+    width: 100%; text-align: left; font-family: var(--serif); color: var(--ink);
+  }
+  .menu-row:last-child { border-bottom: none; }
+  .menu-row:active { background: var(--bg-deep); }
+  .menu-row .ico {
+    width: 36px; height: 36px; border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 18px; flex-shrink: 0; background: var(--bg-deep);
+  }
+  .menu-row .body { flex: 1; min-width: 0; }
+  .menu-row .title {
+    font-size: 15px; font-weight: 600; color: var(--ink);
+  }
+  .menu-row .desc {
+    font-size: 11px; color: var(--ink-light); margin-top: 2px;
+    font-family: var(--mono); letter-spacing: 1px;
+  }
+  .menu-row.danger .ico { background: rgba(181, 67, 39, 0.12); }
+  .menu-row.danger .title { color: var(--accent); }
+  .toast {
+    position: fixed; bottom: 110px; left: 50%; transform: translateX(-50%);
+    background: var(--ink); color: var(--bg); padding: 10px 18px;
+    border-radius: 24px; font-size: 13px; letter-spacing: 1px;
+    z-index: 200; box-shadow: 0 4px 16px rgba(26,20,16,0.25);
+    animation: toastIn 0.25s ease-out;
+    max-width: 80vw; text-align: center;
+  }
+  @keyframes toastIn {
+    from { opacity: 0; transform: translate(-50%, 10px); }
+    to { opacity: 1; transform: translate(-50%, 0); }
+  }
+  /* Receipt image */
+  .image-picker { margin: 12px 0 18px; }
+  .image-row { display:flex; gap:10px; align-items:center; }
+  .image-btn {
+    flex:1; padding:12px 14px; background:var(--bg-deep); border:1.5px dashed var(--border);
+    border-radius:12px; font-family:var(--serif); color:var(--ink-soft); cursor:pointer; text-align:center;
+  }
+  .image-preview {
+    margin-top:10px; display:none; align-items:center; gap:10px; padding:10px;
+    border:1px solid var(--border-soft); border-radius:12px; background:rgba(255,255,255,0.25);
+  }
+  .image-preview img { width:58px; height:58px; object-fit:cover; border-radius:10px; cursor:pointer; }
+  .image-preview .image-info { flex:1; min-width:0; font-size:12px; color:var(--ink-soft); }
+  .image-preview .image-info div:first-child { font-weight:700; color:var(--ink); margin-bottom:2px; }
+  .image-remove {
+    background:transparent; border:1px solid var(--accent); color:var(--accent); border-radius:9px;
+    padding:8px 10px; font-family:var(--serif); cursor:pointer;
+  }
+  .tx-thumb {
+    width:40px; height:40px; object-fit:cover; border-radius:8px; margin-left:8px;
+    border:1px solid var(--border-soft); flex-shrink:0; cursor:pointer;
+  }
+  .image-viewer {
+    position:fixed; inset:0; background:rgba(26,20,16,.86); z-index:300;
+    display:none; align-items:center; justify-content:center; padding:18px;
+  }
+  .image-viewer img { max-width:100%; max-height:86vh; border-radius:14px; box-shadow:0 8px 28px rgba(0,0,0,.35); }
+  .image-viewer button {
+    position:fixed; top:calc(18px + env(safe-area-inset-top)); right:18px;
+    width:38px; height:38px; border-radius:50%; border:1px solid rgba(255,255,255,.45);
+    background:rgba(255,255,255,.12); color:white; font-size:24px; line-height:1;
+  }
+
+</style>
+</head>
+<body>
+<div class="app">
+  <header class="header">
+    <div class="header-row">
+      <div>
+        <div class="brand-eyebrow">LEDGER · 账册</div>
+        <h1 class="brand-title">日 用 簿</h1>
+      </div>
+      <div class="header-right">
+        <div style="text-align:right">
+          <div class="total-label">累计</div>
+          <div class="total-mini" id="lifetimeTotal">¥0.00</div>
+        </div>
+        <button class="menu-btn" id="menuBtn" aria-label="菜单">⋯</button>
+      </div>
+    </div>
+    <div class="divider"></div>
+  </header>
+
+  <div class="switcher" id="switcher">
+    <button data-v="day" class="active">日</button>
+    <button data-v="week">周</button>
+    <button data-v="month">月</button>
+  </div>
+
+  <div class="period-card">
+    <div class="period-nav">
+      <button id="prevBtn" aria-label="previous">‹</button>
+      <div>
+        <div class="period-label" id="periodLabel"></div>
+        <div class="period-current" id="periodCurrent" style="display:none">· 当前 ·</div>
+      </div>
+      <button id="nextBtn" aria-label="next">›</button>
+    </div>
+    <div class="total-wrap">
+      <div class="total-eyebrow">total · 合计</div>
+      <div class="total-amount"><span class="yuan">¥</span><span id="periodTotal">0.00</span></div>
+      <div class="total-meta" id="periodMeta">共 0 笔</div>
+    </div>
+  </div>
+
+  <section id="trendSection" style="display:none">
+    <div class="section-title">
+      <span class="dot"></span>
+      <span class="text" id="trendTitle">时段分布</span>
+    </div>
+    <div class="panel">
+      <div class="bars" id="trendBars"></div>
+    </div>
+  </section>
+
+  <section id="categorySection" style="display:none">
+    <div class="section-title">
+      <span class="dot"></span>
+      <span class="text">分类占比</span>
+    </div>
+    <div class="panel cat-wrap">
+      <div class="pie-wrap">
+        <svg viewBox="0 0 100 100" id="pieSvg" style="width:100%;height:100%;transform:rotate(-90deg)"></svg>
+        <div class="pie-center">
+          <div class="pie-center-eyebrow">类别</div>
+          <div class="pie-center-value" id="pieCount">0</div>
+        </div>
+      </div>
+      <div class="cat-list" id="catList"></div>
+    </div>
+  </section>
+
+  <section>
+    <div class="section-title">
+      <span class="dot"></span>
+      <span class="text" id="txTitle">明细 · 0 笔</span>
+    </div>
+    <div id="txContainer"></div>
+  </section>
+</div>
+
+<button class="fab" id="fab">+</button>
+
+<div class="modal-backdrop" id="menuModal" style="display:none">
+  <div class="modal" id="menuModalCard">
+    <div class="modal-head">
+      <h2 class="modal-title">数 据 管 理</h2>
+      <button class="modal-close" id="menuCloseBtn">×</button>
+    </div>
+    <button class="menu-row" id="exportJsonBtn">
+      <div class="ico">📦</div>
+      <div class="body">
+        <div class="title">导出 JSON 备份</div>
+        <div class="desc">完整备份 · 可再导入恢复</div>
+      </div>
+    </button>
+    <button class="menu-row" id="exportCsvBtn">
+      <div class="ico">📊</div>
+      <div class="body">
+        <div class="title">导出 CSV 表格</div>
+        <div class="desc">用 Excel / Numbers 打开</div>
+      </div>
+    </button>
+    <button class="menu-row" id="importBtn">
+      <div class="ico">📥</div>
+      <div class="body">
+        <div class="title">导入 JSON 备份</div>
+        <div class="desc">从之前导出的备份恢复</div>
+      </div>
+    </button>
+    <button class="menu-row danger" id="clearBtn">
+      <div class="ico">🗑</div>
+      <div class="body">
+        <div class="title">清空所有数据</div>
+        <div class="desc">不可恢复 · 请谨慎操作</div>
+      </div>
+    </button>
+  </div>
+</div>
+
+<input type="file" id="importFile" accept=".json,application/json" style="display:none">
+
+<div class="modal-backdrop" id="modal" style="display:none">
+  <div class="modal" id="modalCard">
+    <div class="modal-head">
+      <h2 class="modal-title" id="modalTitle">记 一 笔</h2>
+      <button class="modal-close" id="closeBtn">×</button>
+    </div>
+    <div class="amount-row">
+      <span class="amount-yuan">¥</span>
+      <input class="amount-input" id="amountInput" type="number" inputmode="decimal" placeholder="0.00" step="0.01">
+    </div>
+    <div class="cat-eyebrow">category · 类别</div>
+    <div class="cat-grid" id="catGrid"></div>
+    <input class="note-input" id="noteInput" type="text" placeholder="备注(可选)" maxlength="30">
+
+    <div class="cat-eyebrow" style="margin-top:4px">receipt · 账单图片</div>
+    <div class="image-picker">
+      <input id="imageInput" type="file" accept="image/*" capture="environment" style="display:none">
+      <div class="image-row">
+        <button type="button" class="image-btn" id="imagePickBtn">上传 / 拍摄账单图片</button>
+      </div>
+      <div class="image-preview" id="imagePreview">
+        <img id="imagePreviewImg" alt="账单图片预览">
+        <div class="image-info">
+          <div id="imagePreviewTitle">已添加图片</div>
+          <div id="imagePreviewMeta">点击缩略图可查看大图</div>
+        </div>
+        <button type="button" class="image-remove" id="imageRemoveBtn">删除</button>
+      </div>
+    </div>
+
+    <div class="cat-eyebrow" style="margin-top:4px">time · 时间</div>
+    <div class="time-quick" id="timeQuick">
+      <button type="button" data-quick="now">此刻</button>
+      <button type="button" data-quick="hour">1 小时前</button>
+      <button type="button" data-quick="yesterday">昨天</button>
+      <button type="button" data-quick="custom">自定义</button>
+    </div>
+    <input class="note-input" id="dateInput" type="datetime-local" style="display:none;margin-top:10px">
+    <div id="dateDisplay" class="date-display"></div>
+
+    <div class="action-row">
+      <button class="submit-btn delete-btn" id="deleteEditBtn" style="display:none">删 除</button>
+      <button class="submit-btn" id="submitBtn" disabled>确 认 入 账</button>
+    </div>
+  </div>
+</div>
+
+<div class="image-viewer" id="imageViewer">
+  <button type="button" id="imageViewerClose">×</button>
+  <img id="imageViewerImg" alt="账单图片">
+</div>
+
+<script>
+const CATEGORIES = [
+  { id: 'food', name: '餐饮', icon: '🍜', color: '#b54327' },
+  { id: 'transport', name: '交通', icon: '🚌', color: '#3a6b7e' },
+  { id: 'shopping', name: '购物', icon: '🛍️', color: '#9b6b3a' },
+  { id: 'entertainment', name: '娱乐', icon: '🎬', color: '#7e5a8c' },
+  { id: 'housing', name: '住房', icon: '🏠', color: '#6b8e5a' },
+  { id: 'medical', name: '医疗', icon: '💊', color: '#c47878' },
+  { id: 'education', name: '教育', icon: '📚', color: '#4a7c9d' },
+  { id: 'other', name: '其他', icon: '✨', color: '#8a8579' },
+];
+const CAT_MAP = Object.fromEntries(CATEGORIES.map(c => [c.id, c]));
+const STORAGE_KEY = 'ledger_transactions_v1';
+
+const state = {
+  transactions: [],
+  view: 'day',
+  refDate: new Date(),
+  selectedCategory: 'food',
+  editingId: null,        // null = adding new; string = editing this id
+  txDate: new Date(),     // the date/time for the transaction being added/edited
+  timeQuick: 'now',       // which quick-time button is selected
+  imageData: null,
+};
+
+// ===== Storage =====
+function load() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (raw) state.transactions = JSON.parse(raw);
+  } catch (e) { console.error(e); }
+}
+function save() {
+  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state.transactions)); }
+  catch (e) { console.error(e); }
+}
+
+// ===== Date helpers =====
+const startOfDay = d => { const x = new Date(d); x.setHours(0,0,0,0); return x; };
+const endOfDay = d => { const x = new Date(d); x.setHours(23,59,59,999); return x; };
+const startOfWeek = d => {
+  const x = startOfDay(d); const dow = x.getDay();
+  const diff = dow === 0 ? -6 : 1 - dow;
+  x.setDate(x.getDate() + diff); return x;
+};
+const endOfWeek = d => { const x = startOfWeek(d); x.setDate(x.getDate() + 6); return endOfDay(x); };
+const startOfMonth = d => { const x = new Date(d); x.setDate(1); return startOfDay(x); };
+const endOfMonth = d => { const x = new Date(d); x.setMonth(x.getMonth()+1, 0); return endOfDay(x); };
+
+// ===== Formatters =====
+const fmt = n => n.toLocaleString('zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+function fmtTime(iso) {
+  const d = new Date(iso);
+  const today = startOfDay(new Date());
+  const txDay = startOfDay(d);
+  const diff = (today - txDay) / 86400000;
+  const hm = String(d.getHours()).padStart(2,'0') + ':' + String(d.getMinutes()).padStart(2,'0');
+  if (diff === 0) return '今天 ' + hm;
+  if (diff === 1) return '昨天 ' + hm;
+  return (d.getMonth()+1) + '/' + d.getDate() + ' ' + hm;
+}
+
+// ===== Period =====
+function getPeriod() {
+  let s, e, label, current = false;
+  const today = new Date();
+  if (state.view === 'day') {
+    s = startOfDay(state.refDate); e = endOfDay(state.refDate);
+    const months = ['一','二','三','四','五','六','七','八','九','十','十一','十二'];
+    label = months[state.refDate.getMonth()] + '月 ' + state.refDate.getDate() + ' 日';
+    current = startOfDay(today).getTime() === s.getTime();
+  } else if (state.view === 'week') {
+    s = startOfWeek(state.refDate); e = endOfWeek(state.refDate);
+    label = (s.getMonth()+1) + '/' + s.getDate() + ' — ' + (e.getMonth()+1) + '/' + e.getDate();
+    current = startOfWeek(today).getTime() === s.getTime();
+  } else {
+    s = startOfMonth(state.refDate); e = endOfMonth(state.refDate);
+    label = state.refDate.getFullYear() + ' 年 ' + (state.refDate.getMonth()+1) + ' 月';
+    current = startOfMonth(today).getTime() === s.getTime();
+  }
+  const txs = state.transactions
+    .filter(t => { const d = new Date(t.date); return d >= s && d <= e; })
+    .sort((a,b) => new Date(b.date) - new Date(a.date));
+  return { s, e, label, current, txs };
+}
+
+// ===== Render =====
+function render() {
+  const p = getPeriod();
+  const total = p.txs.reduce((s,t) => s + t.amount, 0);
+  const lifetime = state.transactions.reduce((s,t) => s + t.amount, 0);
+
+  document.getElementById('lifetimeTotal').textContent = '¥' + fmt(lifetime);
+  document.getElementById('periodLabel').textContent = p.label;
+  document.getElementById('periodCurrent').style.display = p.current ? 'block' : 'none';
+  document.getElementById('periodTotal').textContent = fmt(total);
+  const meta = '共 ' + p.txs.length + ' 笔' +
+    (p.txs.length > 0 && state.view !== 'day' ? ' · 均 ¥' + fmt(total / p.txs.length) : '');
+  document.getElementById('periodMeta').textContent = meta;
+
+  renderTrend(p.txs, total);
+  renderCategories(p.txs, total);
+  renderTransactions(p.txs);
+}
+
+function renderTrend(txs, total) {
+  const section = document.getElementById('trendSection');
+  if (txs.length === 0) { section.style.display = 'none'; return; }
+  section.style.display = 'block';
+  const titleEl = document.getElementById('trendTitle');
+  titleEl.textContent = state.view === 'day' ? '时段分布' : state.view === 'week' ? '周内走势' : '每日支出';
+
+  let data;
+  if (state.view === 'day') {
+    const buckets = [
+      { label: '凌晨', range: [0,6], value: 0 },
+      { label: '上午', range: [6,12], value: 0 },
+      { label: '下午', range: [12,18], value: 0 },
+      { label: '晚上', range: [18,24], value: 0 },
+    ];
+    txs.forEach(t => {
+      const h = new Date(t.date).getHours();
+      const b = buckets.find(x => h >= x.range[0] && h < x.range[1]);
+      if (b) b.value += t.amount;
+    });
+    data = buckets;
+  } else if (state.view === 'week') {
+    const days = ['一','二','三','四','五','六','日'];
+    data = days.map(d => ({ label: d, value: 0 }));
+    txs.forEach(t => {
+      const dow = new Date(t.date).getDay();
+      const idx = dow === 0 ? 6 : dow - 1;
+      data[idx].value += t.amount;
+    });
+  } else {
+    const days = endOfMonth(state.refDate).getDate();
+    data = Array.from({ length: days }, (_, i) => ({ label: String(i+1), value: 0 }));
+    txs.forEach(t => {
+      const d = new Date(t.date).getDate();
+      data[d-1].value += t.amount;
+    });
+  }
+
+  const max = Math.max(...data.map(d => d.value), 0.01);
+  const bars = document.getElementById('trendBars');
+  bars.className = 'bars' + (state.view === 'month' ? ' month' : '');
+  bars.innerHTML = data.map(d => {
+    const h = d.value > 0 ? Math.max(2, (d.value / max) * 100) : 2;
+    const empty = d.value === 0;
+    const showLabel = state.view !== 'month' || data.length <= 15 || (parseInt(d.label) % 5 === 1 || parseInt(d.label) === data.length);
+    return '<div class="bar-col" title="¥' + fmt(d.value) + '">' +
+      '<div class="bar-track"><div class="bar ' + (empty?'empty':'') + '" style="height:' + h + '%"></div></div>' +
+      '<div class="bar-label">' + (showLabel ? d.label : '') + '</div>' +
+    '</div>';
+  }).join('');
+}
+
+function renderCategories(txs, total) {
+  const section = document.getElementById('categorySection');
+  if (txs.length === 0) { section.style.display = 'none'; return; }
+  section.style.display = 'block';
+
+  const map = {};
+  txs.forEach(t => { map[t.category] = (map[t.category] || 0) + t.amount; });
+  const list = CATEGORIES
+    .map(c => ({ ...c, value: map[c.id] || 0 }))
+    .filter(d => d.value > 0)
+    .sort((a,b) => b.value - a.value);
+
+  document.getElementById('pieCount').textContent = list.length;
+
+  // Pie chart
+  const svg = document.getElementById('pieSvg');
+  const cx = 50, cy = 50, r = 32, innerR = 22;
+  let acc = 0;
+  let paths = '';
+  list.forEach(c => {
+    const startAngle = (acc / total) * Math.PI * 2;
+    acc += c.value;
+    const endAngle = (acc / total) * Math.PI * 2;
+    const largeArc = (endAngle - startAngle) > Math.PI ? 1 : 0;
+    const x1 = cx + r * Math.cos(startAngle), y1 = cy + r * Math.sin(startAngle);
+    const x2 = cx + r * Math.cos(endAngle), y2 = cy + r * Math.sin(endAngle);
+    const x3 = cx + innerR * Math.cos(endAngle), y3 = cy + innerR * Math.sin(endAngle);
+    const x4 = cx + innerR * Math.cos(startAngle), y4 = cy + innerR * Math.sin(startAngle);
+    paths += '<path d="M ' + x1 + ' ' + y1 +
+      ' A ' + r + ' ' + r + ' 0 ' + largeArc + ' 1 ' + x2 + ' ' + y2 +
+      ' L ' + x3 + ' ' + y3 +
+      ' A ' + innerR + ' ' + innerR + ' 0 ' + largeArc + ' 0 ' + x4 + ' ' + y4 +
+      ' Z" fill="' + c.color + '" />';
+  });
+  svg.innerHTML = paths;
+
+  // List (top 4)
+  const catList = document.getElementById('catList');
+  const top = list.slice(0, 4);
+  catList.innerHTML = top.map(c => {
+    const pct = (c.value / total) * 100;
+    return '<div class="cat-row">' +
+      '<div class="cat-row-top">' +
+        '<span class="cat-row-name"><span class="icon">' + c.icon + '</span>' + c.name + '</span>' +
+        '<span class="cat-row-pct">' + pct.toFixed(1) + '%</span>' +
+      '</div>' +
+      '<div class="cat-row-bar"><div style="width:' + pct + '%;background:' + c.color + '"></div></div>' +
+    '</div>';
+  }).join('');
+  if (list.length > 4) {
+    catList.innerHTML += '<div class="cat-more">及其他 ' + (list.length - 4) + ' 类</div>';
+  }
+}
+
+function renderTransactions(txs) {
+  document.getElementById('txTitle').textContent = '明细 · ' + txs.length + ' 笔' + (txs.length > 0 ? ' · 点击可编辑' : '');
+  const container = document.getElementById('txContainer');
+  if (txs.length === 0) {
+    const isEmpty = state.transactions.length === 0;
+    container.innerHTML = '<div class="tx-empty">' +
+      '<div class="symbol">○</div>' +
+      '<div class="text">' + (isEmpty ? '尚未有任何记录' : '此时段暂无记录') + '</div>' +
+      '<div class="hint">点击右下角 + 开始记账</div>' +
+    '</div>';
+    return;
+  }
+  container.innerHTML = '<div class="tx-list">' + txs.map(t => {
+    const cat = CAT_MAP[t.category] || CAT_MAP['other'];
+    const noteHtml = t.note ? '<span class="note">· ' + escapeHtml(t.note) + '</span>' : '';
+    const imgHtml = t.image ? '<img class="tx-thumb" data-img="' + t.id + '" src="' + t.image + '" alt="账单图片">' : '';
+    return '<div class="tx-item" data-id="' + t.id + '">' +
+      '<div class="tx-icon" style="background:' + cat.color + '1a">' + cat.icon + '</div>' +
+      '<div class="tx-body">' +
+        '<div class="tx-line1">' +
+          '<span class="tx-name">' + cat.name + '</span>' +
+          '<span class="tx-amount">¥' + fmt(t.amount) + '</span>' +
+        '</div>' +
+        '<div class="tx-line2">' +
+          '<span class="tx-meta">' + fmtTime(t.date) + noteHtml + '</span>' +
+          '<span style="display:flex;align-items:center;gap:2px">' + imgHtml + '<button class="tx-delete" data-del="' + t.id + '" aria-label="删除">🗑</button></span>' +
+        '</div>' +
+      '</div>' +
+    '</div>';
+  }).join('') + '</div>';
+}
+
+function escapeHtml(s) {
+  return s.replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+// ===== Modal =====
+function buildCatGrid() {
+  const grid = document.getElementById('catGrid');
+  grid.innerHTML = CATEGORIES.map(c =>
+    '<button class="cat-btn" data-cat="' + c.id + '" style="--c:' + c.color + '">' +
+      '<span class="ico">' + c.icon + '</span>' +
+      '<span class="lbl">' + c.name + '</span>' +
+    '</button>'
+  ).join('');
+  grid.querySelectorAll('button').forEach(btn => {
+    btn.addEventListener('click', () => {
+      state.selectedCategory = btn.dataset.cat;
+      updateCatGrid();
+    });
+  });
+  updateCatGrid();
+}
+function updateCatGrid() {
+  document.querySelectorAll('#catGrid button').forEach(btn => {
+    const cat = CAT_MAP[btn.dataset.cat];
+    if (btn.dataset.cat === state.selectedCategory) {
+      btn.classList.add('active');
+      btn.style.borderColor = cat.color;
+      btn.style.background = cat.color + '15';
+      btn.querySelector('.lbl').style.color = cat.color;
+    } else {
+      btn.classList.remove('active');
+      btn.style.borderColor = '';
+      btn.style.background = '';
+      btn.querySelector('.lbl').style.color = '';
+    }
+  });
+}
+
+function openModal(editId) {
+  const modal = document.getElementById('modal');
+  modal.style.display = 'flex';
+  const editTx = editId ? state.transactions.find(t => t.id === editId) : null;
+
+  if (editTx) {
+    state.editingId = editTx.id;
+    document.getElementById('modalTitle').textContent = '修 改 记 录';
+    document.getElementById('amountInput').value = editTx.amount;
+    document.getElementById('noteInput').value = editTx.note || '';
+    state.selectedCategory = editTx.category;
+    state.txDate = new Date(editTx.date);
+    state.timeQuick = 'custom';
+    state.imageData = editTx.image || null;
+    document.getElementById('deleteEditBtn').style.display = 'block';
+    document.getElementById('submitBtn').textContent = '保 存 修 改';
+  } else {
+    state.editingId = null;
+    document.getElementById('modalTitle').textContent = '记 一 笔';
+    document.getElementById('amountInput').value = '';
+    document.getElementById('noteInput').value = '';
+    state.selectedCategory = 'food';
+    state.txDate = new Date();
+    state.timeQuick = 'now';
+    state.imageData = null;
+    document.getElementById('deleteEditBtn').style.display = 'none';
+    document.getElementById('submitBtn').textContent = '确 认 入 账';
+  }
+
+  updateCatGrid();
+  updateTimeUI();
+  updateImagePreview();
+  document.getElementById('imageInput').value = '';
+  updateSubmitBtn();
+  if (!editTx) setTimeout(() => document.getElementById('amountInput').focus(), 100);
+}
+function closeModal() {
+  document.getElementById('modal').style.display = 'none';
+  document.getElementById('dateInput').style.display = 'none';
+  state.editingId = null;
+}
+function updateSubmitBtn() {
+  const v = parseFloat(document.getElementById('amountInput').value);
+  document.getElementById('submitBtn').disabled = !v || v <= 0;
+}
+
+function updateImagePreview() {
+  const box = document.getElementById('imagePreview');
+  const img = document.getElementById('imagePreviewImg');
+  const meta = document.getElementById('imagePreviewMeta');
+  if (!box || !img) return;
+  if (state.imageData) {
+    img.src = state.imageData;
+    box.style.display = 'flex';
+    const kb = Math.round((state.imageData.length * 3 / 4) / 1024);
+    meta.textContent = '已压缩保存 · 约 ' + kb + ' KB · 点击缩略图看大图';
+  } else {
+    img.removeAttribute('src');
+    box.style.display = 'none';
+  }
+}
+
+function openImageViewer(src) {
+  if (!src) return;
+  document.getElementById('imageViewerImg').src = src;
+  document.getElementById('imageViewer').style.display = 'flex';
+}
+function closeImageViewer() {
+  document.getElementById('imageViewer').style.display = 'none';
+  document.getElementById('imageViewerImg').removeAttribute('src');
+}
+
+function compressImageFile(file, maxSide = 1280, quality = 0.78) {
+  return new Promise((resolve, reject) => {
+    if (!file || !file.type || !file.type.startsWith('image/')) { reject(new Error('请选择图片文件')); return; }
+    const reader = new FileReader();
+    reader.onerror = () => reject(new Error('读取图片失败'));
+    reader.onload = () => {
+      const img = new Image();
+      img.onerror = () => reject(new Error('图片加载失败'));
+      img.onload = () => {
+        let { width, height } = img;
+        const scale = Math.min(1, maxSide / Math.max(width, height));
+        width = Math.round(width * scale);
+        height = Math.round(height * scale);
+        const canvas = document.createElement('canvas');
+        canvas.width = width; canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0, width, height);
+        resolve(canvas.toDataURL('image/jpeg', quality));
+      };
+      img.src = reader.result;
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
+function updateTimeUI() {
+  // highlight active quick button
+  document.querySelectorAll('#timeQuick button').forEach(b => {
+    b.classList.toggle('active', b.dataset.quick === state.timeQuick);
+  });
+  const dateInput = document.getElementById('dateInput');
+  if (state.timeQuick === 'custom') {
+    dateInput.style.display = 'block';
+    // format for datetime-local: YYYY-MM-DDTHH:MM
+    const d = state.txDate;
+    const pad = n => String(n).padStart(2, '0');
+    dateInput.value = d.getFullYear() + '-' + pad(d.getMonth()+1) + '-' + pad(d.getDate()) +
+      'T' + pad(d.getHours()) + ':' + pad(d.getMinutes());
+  } else {
+    dateInput.style.display = 'none';
+  }
+  // show what date will be saved
+  const d = state.txDate;
+  const pad = n => String(n).padStart(2, '0');
+  const today = startOfDay(new Date());
+  const txDay = startOfDay(d);
+  const diff = (today - txDay) / 86400000;
+  const hm = pad(d.getHours()) + ':' + pad(d.getMinutes());
+  let label;
+  if (diff === 0) label = '今天 ' + hm;
+  else if (diff === 1) label = '昨天 ' + hm;
+  else if (diff === -1) label = '明天 ' + hm;
+  else label = (d.getMonth()+1) + '月' + d.getDate() + '日 ' + hm;
+  document.getElementById('dateDisplay').textContent = '→ 记于 ' + label;
+}
+
+function setQuickTime(kind) {
+  state.timeQuick = kind;
+  const now = new Date();
+  if (kind === 'now') {
+    state.txDate = new Date();
+  } else if (kind === 'hour') {
+    const d = new Date(); d.setHours(d.getHours() - 1); state.txDate = d;
+  } else if (kind === 'yesterday') {
+    const d = new Date(); d.setDate(d.getDate() - 1); state.txDate = d;
+  }
+  // 'custom' keeps current state.txDate; user edits via picker
+  updateTimeUI();
+}
+
+function submitTx() {
+  const amount = parseFloat(document.getElementById('amountInput').value);
+  if (!amount || amount <= 0) return;
+  const note = document.getElementById('noteInput').value.trim();
+  // Use current time at moment of save if "now" still selected (so it's freshest)
+  let txDate = state.txDate;
+  if (state.timeQuick === 'now') txDate = new Date();
+
+  if (state.editingId) {
+    const idx = state.transactions.findIndex(t => t.id === state.editingId);
+    if (idx >= 0) {
+      state.transactions[idx] = {
+        ...state.transactions[idx],
+        amount, category: state.selectedCategory, note,
+        date: txDate.toISOString(),
+        image: state.imageData,
+      };
+      state.transactions.sort((a, b) => new Date(b.date) - new Date(a.date));
+    }
+  } else {
+    state.transactions.push({
+      id: Date.now().toString() + Math.random().toString(36).slice(2,6),
+      amount, category: state.selectedCategory, note,
+      date: txDate.toISOString(),
+        image: state.imageData,
+    });
+    state.transactions.sort((a, b) => new Date(b.date) - new Date(a.date));
+  }
+  save();
+  closeModal();
+  render();
+}
+
+function deleteEditing() {
+  if (!state.editingId) return;
+  if (!confirm('删除这笔记录?')) return;
+  state.transactions = state.transactions.filter(t => t.id !== state.editingId);
+  save();
+  closeModal();
+  render();
+}
+
+// ===== Export / Import =====
+function downloadBlob(content, filename, mime) {
+  const blob = new Blob([content], { type: mime });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  setTimeout(() => URL.revokeObjectURL(url), 500);
+}
+
+function pad2(n) { return String(n).padStart(2, '0'); }
+function dateStamp() {
+  const d = new Date();
+  return d.getFullYear() + pad2(d.getMonth()+1) + pad2(d.getDate()) +
+    '_' + pad2(d.getHours()) + pad2(d.getMinutes());
+}
+
+async function copyOrDownload(text, filename, mime, okMsg) {
+  // Try clipboard first (works inside in-app webview); fall back to download
+  try {
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      await navigator.clipboard.writeText(text);
+      showToast(okMsg + ' · 已复制到剪贴板');
+      closeMenuModal();
+      return;
+    }
+  } catch (e) {}
+  try {
+    downloadBlob(text, filename, mime);
+    showToast(okMsg + ' · 已生成文件');
+    closeMenuModal();
+    return;
+  } catch (e) {}
+  // Last resort: show in import box for manual select
+  document.getElementById('importText') && (document.getElementById('importText').value = text);
+  showToast('请在下方文本框长按全选复制');
+}
+
+function exportJSON() {
+  const payload = {
+    app: 'ledger', version: 1, exportedAt: new Date().toISOString(),
+    count: state.transactions.length, transactions: state.transactions,
+  };
+  copyOrDownload(JSON.stringify(payload, null, 2),
+    '日用簿备份_' + dateStamp() + '.json', 'application/json;charset=utf-8',
+    '已备份 ' + state.transactions.length + ' 笔');
+}
+
+function exportCSV() {
+  if (state.transactions.length === 0) { showToast('暂无数据可导出'); return; }
+  const header = ['日期时间', '类别', '金额', '备注', '是否有图片'];
+  const rows = state.transactions.slice().sort((a, b) => new Date(a.date) - new Date(b.date)).map(t => {
+    const d = new Date(t.date);
+    const dt = d.getFullYear() + '-' + pad2(d.getMonth()+1) + '-' + pad2(d.getDate()) +
+      ' ' + pad2(d.getHours()) + ':' + pad2(d.getMinutes());
+    return [dt, (CAT_MAP[t.category] || CAT_MAP.other).name, t.amount.toFixed(2), t.note || '', t.image ? '是' : '否'];
+  });
+  const esc = v => { const s = String(v); return /[",\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s; };
+  const csv = [header, ...rows].map(r => r.map(esc).join(',')).join('\r\n');
+  copyOrDownload('\uFEFF' + csv, '日用簿_' + dateStamp() + '.csv', 'text/csv;charset=utf-8',
+    '已导出 ' + rows.length + ' 笔 CSV');
+}
+
+function importJSON() {
+  document.getElementById('importFile').click();
+}
+
+function handleImportFile(file) {
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    try {
+      const data = JSON.parse(e.target.result);
+      let txs = null;
+      if (Array.isArray(data)) txs = data;
+      else if (data && Array.isArray(data.transactions)) txs = data.transactions;
+      if (!txs) throw new Error('格式不正确');
+      // Validate each entry
+      const validCats = new Set(CATEGORIES.map(c => c.id));
+      const cleaned = txs
+        .filter(t => t && typeof t.amount === 'number' && t.amount > 0 && t.date)
+        .map(t => ({
+          id: t.id || (Date.now().toString() + Math.random().toString(36).slice(2,6)),
+          amount: t.amount,
+          category: validCats.has(t.category) ? t.category : 'other',
+          note: typeof t.note === 'string' ? t.note : '',
+          image: typeof t.image === 'string' ? t.image : null,
+          date: t.date,
+        }));
+      if (cleaned.length === 0) {
+        showToast('文件中无有效记录');
+        return;
+      }
+      const existing = state.transactions.length;
+      if (existing > 0) {
+        const choice = confirm(
+          '检测到当前已有 ' + existing + ' 笔记录。\n\n' +
+          '点【确定】= 合并(保留现有 + 加入导入)\n' +
+          '点【取消】= 取消导入\n\n' +
+          '若需替换，请先「清空所有数据」再导入。'
+        );
+        if (!choice) return;
+        // Merge, dedupe by id
+        const map = new Map(state.transactions.map(t => [t.id, t]));
+        cleaned.forEach(t => { if (!map.has(t.id)) map.set(t.id, t); });
+        state.transactions = Array.from(map.values())
+          .sort((a, b) => new Date(b.date) - new Date(a.date));
+      } else {
+        state.transactions = cleaned.sort((a, b) => new Date(b.date) - new Date(a.date));
+      }
+      save();
+      render();
+      showToast('导入成功 · 共 ' + state.transactions.length + ' 笔');
+      closeMenuModal();
+    } catch (err) {
+      showToast('导入失败:文件格式不正确');
+      console.error(err);
+    }
+  };
+  reader.onerror = () => showToast('读取文件失败');
+  reader.readAsText(file);
+}
+
+function clearAll() {
+  if (state.transactions.length === 0) {
+    showToast('当前无数据');
+    return;
+  }
+  const ok = confirm(
+    '将永久删除全部 ' + state.transactions.length + ' 笔记录,且无法恢复。\n\n' +
+    '建议先「导出 JSON 备份」。\n\n确定要清空吗?'
+  );
+  if (!ok) return;
+  const ok2 = confirm('最后确认:真的清空所有数据吗?');
+  if (!ok2) return;
+  state.transactions = [];
+  save();
+  render();
+  showToast('已清空所有数据');
+  closeMenuModal();
+}
+
+function openMenuModal() {
+  document.getElementById('menuModal').style.display = 'flex';
+}
+function closeMenuModal() {
+  document.getElementById('menuModal').style.display = 'none';
+}
+
+let toastTimer = null;
+function showToast(msg) {
+  const existing = document.querySelector('.toast');
+  if (existing) existing.remove();
+  if (toastTimer) clearTimeout(toastTimer);
+  const t = document.createElement('div');
+  t.className = 'toast';
+  t.textContent = msg;
+  document.body.appendChild(t);
+  toastTimer = setTimeout(() => {
+    t.style.transition = 'opacity 0.2s';
+    t.style.opacity = '0';
+    setTimeout(() => t.remove(), 200);
+  }, 2200);
+}
+
+// ===== Events =====
+function bindEvents() {
+  document.getElementById('switcher').querySelectorAll('button').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('#switcher button').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      state.view = btn.dataset.v;
+      state.refDate = new Date();
+      render();
+    });
+  });
+  document.getElementById('prevBtn').addEventListener('click', () => navigate(-1));
+  document.getElementById('nextBtn').addEventListener('click', () => navigate(1));
+  document.getElementById('fab').addEventListener('click', () => openModal(null));
+  document.getElementById('closeBtn').addEventListener('click', closeModal);
+  document.getElementById('modal').addEventListener('click', e => {
+    if (e.target.id === 'modal') closeModal();
+  });
+  document.getElementById('amountInput').addEventListener('input', updateSubmitBtn);
+  document.getElementById('amountInput').addEventListener('keydown', e => {
+    if (e.key === 'Enter') submitTx();
+  });
+  document.getElementById('noteInput').addEventListener('keydown', e => {
+    if (e.key === 'Enter') submitTx();
+  });
+  document.getElementById('submitBtn').addEventListener('click', submitTx);
+  document.getElementById('deleteEditBtn').addEventListener('click', deleteEditing);
+
+  // Time quick buttons
+  document.querySelectorAll('#timeQuick button').forEach(b => {
+    b.addEventListener('click', () => setQuickTime(b.dataset.quick));
+  });
+  document.getElementById('dateInput').addEventListener('change', e => {
+    if (e.target.value) {
+      state.txDate = new Date(e.target.value);
+      updateTimeUI();
+    }
+  });
+
+  // Tap a transaction to edit; trash icon (with stopPropagation) still works
+  document.getElementById('txContainer').addEventListener('click', e => {
+    const imgBtn = e.target.closest('[data-img]');
+    if (imgBtn) {
+      e.stopPropagation();
+      const tx = state.transactions.find(t => t.id === imgBtn.dataset.img);
+      if (tx && tx.image) openImageViewer(tx.image);
+      return;
+    }
+    const delBtn = e.target.closest('[data-del]');
+    if (delBtn) {
+      e.stopPropagation();
+      const id = delBtn.dataset.del;
+      if (confirm('删除这笔记录？')) {
+        state.transactions = state.transactions.filter(t => t.id !== id);
+        save();
+        render();
+      }
+      return;
+    }
+    const item = e.target.closest('[data-id]');
+    if (item) openModal(item.dataset.id);
+  });
+  document.getElementById('imagePickBtn').addEventListener('click', () => document.getElementById('imageInput').click());
+  document.getElementById('imageRemoveBtn').addEventListener('click', () => {
+    state.imageData = null;
+    document.getElementById('imageInput').value = '';
+    updateImagePreview();
+  });
+  document.getElementById('imagePreviewImg').addEventListener('click', () => openImageViewer(state.imageData));
+  document.getElementById('imageViewerClose').addEventListener('click', closeImageViewer);
+  document.getElementById('imageViewer').addEventListener('click', e => { if (e.target.id === 'imageViewer') closeImageViewer(); });
+  document.getElementById('imageInput').addEventListener('change', async e => {
+    const f = e.target.files && e.target.files[0];
+    if (!f) return;
+    try {
+      showToast('正在压缩图片…');
+      state.imageData = await compressImageFile(f);
+      updateImagePreview();
+      showToast('图片已添加');
+    } catch (err) {
+      showToast(err.message || '图片处理失败');
+    }
+  });
+
+  // Menu modal
+  document.getElementById('menuBtn').addEventListener('click', openMenuModal);
+  document.getElementById('menuCloseBtn').addEventListener('click', closeMenuModal);
+  document.getElementById('menuModal').addEventListener('click', e => {
+    if (e.target.id === 'menuModal') closeMenuModal();
+  });
+  document.getElementById('exportJsonBtn').addEventListener('click', exportJSON);
+  document.getElementById('exportCsvBtn').addEventListener('click', exportCSV);
+  document.getElementById('importBtn').addEventListener('click', importJSON);
+  document.getElementById('clearBtn').addEventListener('click', clearAll);
+  document.getElementById('importFile').addEventListener('change', e => {
+    const file = e.target.files && e.target.files[0];
+    handleImportFile(file);
+    e.target.value = ''; // allow re-importing same file
+  });
+}
+
+function navigate(dir) {
+  const d = new Date(state.refDate);
+  if (state.view === 'day') d.setDate(d.getDate() + dir);
+  else if (state.view === 'week') d.setDate(d.getDate() + dir * 7);
+  else d.setMonth(d.getMonth() + dir);
+  state.refDate = d;
+  render();
+}
+
+// ===== Init =====
+load();
+buildCatGrid();
+bindEvents();
+render();
+</script>
+</body>
+</html>
